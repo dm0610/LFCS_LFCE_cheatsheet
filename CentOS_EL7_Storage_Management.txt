@@ -1,0 +1,129 @@
+-----------------------------------------------------------
+Introduction to Linux Storage Management and the Associated Certification : Listing Block Storage
+-----------------------------------------------------------
+lsblk # show disk|mounts tree 
+
+-----------------------------------------------------------
+ Partitioning Disks
+-----------------------------------------------------------
+fdisk -l /dev/sdb #list partition
+fdisk /dev/sdb    #create partitions
+83 Linux
+82 swap
+8e LVM
+fd RAID
+gdisk #для GPT разделов
+-----------------------------------------------------------
+Partitioning with Parted
+-----------------------------------------------------------
+parted /dev/sdb print #вывод партиций
+parted # входим в режим (parted)
+    # select  /dev/sdb
+    # print
+    # CTRL+l
+    # mklabel msdos|gpt
+    # mkpart primary 1 200
+    # mkpart extended 201 -1
+    # mkpart logical 202 300
+    # quit
+dd if=/dev/zero of=/dev/sdb count=1 bs-512
+-----------------------------------------------------------
+Scripting Partition Creating
+-----------------------------------------------------------
+vi part.sh
+#!/bin/bash
+DISK="/dev/sdb"
+# Create MBR partition table and extended partition across disk
+parted -s $DISK -- mklabel msdos mkpart extended 1m -1m
+
+#Create swap partition as partition 5 the first logical parition
+parted -s $DISK mkpart logical linux-swap 2m 100m #5
+
+parted -s $DISK mkpart logical 101m 200m #6
+parted -s $DISK mkpart logical 201m 300m #7
+parted -s $DISK mkpart logical 301m 400m #8
+parted -s $DISK mkpart logical 401m 500m #9
+
+#Create 3 more logical partitons for LVMs
+parted -s $DISK mkpart logical 501m 600m #10
+parted -s $DISK mkpart logical 601m 700m #11
+parted -s $DISK mkpart logical 701m 800m #12
+parted -s $DISK set 10 lvm on # set partition 10 to LVM
+parted -s $DISK set 11 lvm on # set partion 11 to LVM
+parted -s $DISK set 12 lvm on # set partition 12 to LVM
+
+#Create 2 more partions for RAID
+parted -s $DISK mkpart logical 801m 900m #13
+parted -s $DISK mkpart logical 901m 1000m #14
+parted -s $DISK set 13 raid on # set partition 13 to RAID
+parted -s $DISK set 14 raid on # set partion 14 to RAID
+parted -s $DISK print
+
+-----------------------------------------------------------
+Creating Linux File Systems
+-----------------------------------------------------------
+mkfs.ext4 -L DATA /dev/sdb6
+tune2fs -L MYDATA -c 0 -i 0 /dev/sdb6
+dumpe2fs /dev/sdb6 |  less
+-----------------------------------------------------------
+Enterprise Class File Systems with XFS
+
+mkfs.xfs /-b size=1k -l size=10m /dev/sdb7
+xfs_db -x /dev/sdb7
+    #help
+    #uuid
+    #label DATA2
+    #quit
+-----------------------------------------------------------
+Using the mount Command and EXT4 File Systems
+
+mount /dev/sdb6 /mnt
+ls /mnt
+umount /mnt
+mkdir /data/{mydata,data2}
+ls /data
+mount /dev/sdb6 /data/mydata
+mount | grep mydata
+mount -o remount, noexec /dev/sdb6 /data/mydata
+umount /data/mydata
+cat /proc/mounts # all mounted data
+
+bldid /dev/sdb6 # get uuid, label etc
+
+vim /etc/fstab
+    # UUID="" /data/mydata ext4 noexec 0 2
+mount -a
+mount | grep mydata
+
+
+-----------------------------------------------------------
+Using the mount Command and XFS File Systems
+-----------------------------------------------------------
+blkid /dev/sdb7
+vi /etc/fstab
+    #UUID="" /data/data2 xfs defaults 0 0
+mount -a 
+mount | grep data2
+xfs_info /dev/sdb7
+-----------------------------------------------------------
+Mount Options
+-----------------------------------------------------------
+man mount
+vi /etc/fstab
+
+-----------------------------------------------------------
+ Managing Swap and RAID Devices
+-----------------------------------------------------------
+82
+lsblk 
+fdisk -l /dev/sdb
+mkswap /dev/sdb5
+swapon -s
+swapon /dev/sdb5
+swapoff /dev/sdb5
+free -m
+
+Priority, highest priority is used first
+Mount options sw,pri=<value>
+
+
