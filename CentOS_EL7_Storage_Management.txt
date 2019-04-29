@@ -88,7 +88,7 @@ mount -o remount, noexec /dev/sdb6 /data/mydata
 umount /data/mydata
 cat /proc/mounts # all mounted data
 
-bldid /dev/sdb6 # get uuid, label etc
+blkid /dev/sdb6 # get uuid, label etc
 
 vim /etc/fstab
     # UUID="" /data/mydata ext4 noexec 0 2
@@ -126,4 +126,52 @@ free -m
 Priority, highest priority is used first
 Mount options sw,pri=<value>
 
+-----------------------------------------------------------
+ACL Extended Permissions
+-----------------------------------------------------------
+ls /boot/config-3.10.0.*
+uname -r
+grep ACL /boot/config-$(uname -r)
+-----
+mount | grep data
 
+sudo tune2fs -l /dev/sdb6 | grep default 
+
+
+-----------------------------------------------------------
+Listing Filesystem ACL
+-----------------------------------------------------------
+ls -al
+getfacl df.sh
+
+-----------------------------------------------------------
+Setting Default ACL
+-----------------------------------------------------------
+mkdir test-acl
+ls -ld test-acl/
+getfacl test-acl/
+umask
+setfacl -m d:o:--- test-acl/
+touch test-acl/file1
+ls -l test-acl/file1
+setfacl -dm u:bob:rw test-acl/
+getfacl test-acl/
+touch test-acl/file2
+ls -l test-acl/file*
+getfacl test-acl/file2
+
+-----------------------------------------------------------
+Adding ACL Entries 
+-----------------------------------------------------------
+mkdir /work
+ls -ld /work
+chmod o= /work
+setfacl -m user:username:rwx /work/
+getfacl /work
+setfacl -m d:0:--- /work
+
+-----------------------------------------------------------
+Removing ACL
+-----------------------------------------------------------
+setfacl -x u:username file1 #delete permission
+setfacl -b file1 # delete acl
